@@ -213,116 +213,106 @@ void Chip8::cycle() {
     //DECODE E EXECUTE
     switch (opcode & 0xF000) {
         case 0x0000: {
-            switch (opcode & 0x00F0) {
-                case 0x00E0:
-                    if (opcode == 0x00E0) {
-                        // CLS
-                        for (int yy = 0; yy < 64; yy++) {
-                            for (int xx = 0; xx < 128; xx++) {
-                                if (bitplane_select & 0x1) plane1[yy][xx] = 0;
-                                if (bitplane_select & 0x2) plane2[yy][xx] = 0;
-                            }
-                        }
-                    } else if (opcode == 0x00EE) {
-                        // RET
-                        pc = pop();
-                    }
-                    break;
-
-                case 0x00C0: {
-                    // 00CN - Scroll Down di N pixel
-                    int n = opcode & 0x000F;
-                    int width = is_hi_res ? 128 : 64;
-                    int height = is_hi_res ? 64 : 32;
-
-                    for (int yy = height - 1; yy >= 0; yy--) {
-                        for (int xx = 0; xx < width; xx++) {
-                            uint8_t src_p1 = (yy >= n) ? plane1[yy - n][xx] : 0;
-                            uint8_t src_p2 = (yy >= n) ? plane2[yy - n][xx] : 0;
-
-                            if (bitplane_select & 0x1) plane1[yy][xx] = src_p1;
-                            if (bitplane_select & 0x2) plane2[yy][xx] = src_p2;
-                        }
-                    }
-                    break;
-                }
-
-                case 0x00D0: {
-                    // 00DN - Scroll Up di N pixel (XO-CHIP)
-                    int n = opcode & 0x000F;
-                    int width = is_hi_res ? 128 : 64;
-                    int height = is_hi_res ? 64 : 32;
-
-                    for (int yy = 0; yy < height; yy++) {
-                        for (int xx = 0; xx < width; xx++) {
-                            uint8_t src_p1 = (yy + n < height) ? plane1[yy + n][xx] : 0;
-                            uint8_t src_p2 = (yy + n < height) ? plane2[yy + n][xx] : 0;
-
-                            if (bitplane_select & 0x1) plane1[yy][xx] = src_p1;
-                            if (bitplane_select & 0x2) plane2[yy][xx] = src_p2;
-                        }
-                    }
-                    break;
-                }
-
-                case 0x00F0: {
-                    int width = is_hi_res ? 128 : 64;
-                    int height = is_hi_res ? 64 : 32;
-
-                    switch (opcode & 0x000F) {
-                        case 0x000B: {
-                            // 00FB - Scroll Right di 4 pixel (SCHIP)
-                            for (int yy = 0; yy < height; yy++) {
-                                for (int xx = width - 1; xx >= 0; xx--) {
-                                    uint8_t src_p1 = (xx >= 4) ? plane1[yy][xx - 4] : 0;
-                                    uint8_t src_p2 = (xx >= 4) ? plane2[yy][xx - 4] : 0;
-
-                                    if (bitplane_select & 0x1) plane1[yy][xx] = src_p1;
-                                    if (bitplane_select & 0x2) plane2[yy][xx] = src_p2;
-                                }
-                            }
-                            break;
-                        }
-
-                        case 0x000C: {
-                            // 00FC - Scroll Left di 4 pixel (SCHIP)
-                            for (int yy = 0; yy < height; yy++) {
-                                for (int xx = 0; xx < width; xx++) {
-                                    uint8_t src_p1 = (xx + 4 < width) ? plane1[yy][xx + 4] : 0;
-                                    uint8_t src_p2 = (xx + 4 < width) ? plane2[yy][xx + 4] : 0;
-
-                                    if (bitplane_select & 0x1) plane1[yy][xx] = src_p1;
-                                    if (bitplane_select & 0x2) plane2[yy][xx] = src_p2;
-                                }
-                            }
-                            break;
-                        }
-                    }
-                    break;
-                }
-
-                case 0x000E:
-                    is_hi_res = true;
-                    for (int yy = 0; yy < 64; yy++) {
-                        for (int xx = 0; xx < 128; xx++) {
-                            if (bitplane_select & 0x1) plane1[yy][xx] = 0;
-                            if (bitplane_select & 0x2) plane2[yy][xx] = 0;
-                        }
-                    }
-                    break;
-
-                case 0x000F:
-                    is_hi_res = false;
-                    for (int yy = 0; yy < 64; yy++) {
-                        for (int xx = 0; xx < 128; xx++) {
-                            if (bitplane_select & 0x1) plane1[yy][xx] = 0;
-                            if (bitplane_select & 0x2) plane2[yy][xx] = 0;
-                        }
-                    }
-                    break;
-            } // chiude switch (opcode & 0x00F0)
-            break; // chiude case 0x0000 dello switch esterno
+    // Gestione dei casi esatti a 16 bit
+    if (opcode == 0x00E0) {
+        // CLS - Pulisce i piani correntemente selezionati
+        for (int yy = 0; yy < 64; yy++) {
+            for (int xx = 0; xx < 128; xx++) {
+                if (bitplane_select & 0x1) plane1[yy][xx] = 0;
+                if (bitplane_select & 0x2) plane2[yy][xx] = 0;
+            }
         }
+    }
+    else if (opcode == 0x00EE) {
+        // RET - Ritorna da una subroutine
+        pc = pop();
+    }
+    else if (opcode == 0x00FE) {
+        // LOW-RES mode (64x32)
+        is_hi_res = false;
+        for (int yy = 0; yy < 64; yy++) {
+            for (int xx = 0; xx < 128; xx++) {
+                if (bitplane_select & 0x1) plane1[yy][xx] = 0;
+                if (bitplane_select & 0x2) plane2[yy][xx] = 0;
+            }
+        }
+    }
+    else if (opcode == 0x00FF) {
+        // HI-RES mode (128x64)
+        is_hi_res = true;
+        for (int yy = 0; yy < 64; yy++) {
+            for (int xx = 0; xx < 128; xx++) {
+                if (bitplane_select & 0x1) plane1[yy][xx] = 0;
+                if (bitplane_select & 0x2) plane2[yy][xx] = 0;
+            }
+        }
+    }
+    else if (opcode == 0x00FD) {
+        // EXIT - Ferma l'emulatore (S-CHIP)
+
+    }
+    else {
+        // Gestione delle istruzioni parametriche (0x00CN, 0x00DN, 0x00FB, 0x00FC)
+        int width = is_hi_res ? 128 : 64;
+        int height = is_hi_res ? 64 : 32;
+
+        if ((opcode & 0x00F0) == 0x00C0) {
+            // 00CN - Scroll Down di N pixel
+            int n = opcode & 0x000F;
+            for (int yy = height - 1; yy >= 0; yy--) {
+                for (int xx = 0; xx < width; xx++) {
+                    if (bitplane_select & 0x1) {
+                        plane1[yy][xx] = (yy >= n) ? plane1[yy - n][xx] : 0;
+                    }
+                    if (bitplane_select & 0x2) {
+                        plane2[yy][xx] = (yy >= n) ? plane2[yy - n][xx] : 0;
+                    }
+                }
+            }
+        }
+        else if ((opcode & 0x00F0) == 0x00D0) {
+            // 00DN - Scroll Up di N pixel (XO-CHIP)
+            int n = opcode & 0x000F;
+            for (int yy = 0; yy < height; yy++) {
+                for (int xx = 0; xx < width; xx++) {
+                    if (bitplane_select & 0x1) {
+                        plane1[yy][xx] = (yy + n < height) ? plane1[yy + n][xx] : 0;
+                    }
+                    if (bitplane_select & 0x2) {
+                        plane2[yy][xx] = (yy + n < height) ? plane2[yy + n][xx] : 0;
+                    }
+                }
+            }
+        }
+        else if (opcode == 0x00FB) {
+            // 00FB - Scroll Right di 4 pixel
+            for (int yy = 0; yy < height; yy++) {
+                for (int xx = width - 1; xx >= 0; xx--) {
+                    if (bitplane_select & 0x1) {
+                        plane1[yy][xx] = (xx >= 4) ? plane1[yy][xx - 4] : 0;
+                    }
+                    if (bitplane_select & 0x2) {
+                        plane2[yy][xx] = (xx >= 4) ? plane2[yy][xx - 4] : 0;
+                    }
+                }
+            }
+        }
+        else if (opcode == 0x00FC) {
+            // 00FC - Scroll Left di 4 pixel
+            for (int yy = 0; yy < height; yy++) {
+                for (int xx = 0; xx < width; xx++) {
+                    if (bitplane_select & 0x1) {
+                        plane1[yy][xx] = (xx + 4 < width) ? plane1[yy][xx + 4] : 0;
+                    }
+                    if (bitplane_select & 0x2) {
+                        plane2[yy][xx] = (xx + 4 < width) ? plane2[yy][xx + 4] : 0;
+                    }
+                }
+            }
+        }
+    }
+    break;
+}
 
         case 0x1000:
             pc = opcode & 0x0FFF;
